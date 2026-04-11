@@ -24,7 +24,13 @@ To access the web app from other devices in your Tailnet:
 2. Ensure you have the **Next.js app** running (`npm run dev`).
 3. Access the board via your server's Tailscale hostname: `http://<tailscale-hostname>:3000`.
 
-*Note: For a truly persistent web setup, it's recommended to run the build version with a process manager like `pm2`:*
+## Security Notice
+
+TohdohBoard lacks built-in authentication. Access should be restricted to your **Tailscale** network. If your server is exposed to the internet, ensure your firewall (e.g., `ufw`) blocks public access to port 3000 and only allows it via the `tailscale0` interface.
+
+## Deployment
+
+For a persistent web setup, run the build version with a process manager like `pm2`:
 ```bash
 npm run build
 pm2 start npm --name "tohdoh-web" -- start
