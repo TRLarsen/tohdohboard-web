@@ -108,10 +108,16 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   addContext: async (name) => {
+    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
+    if (get().contexts.find(c => c.id === id)) {
+      console.error(`Context with ID "${id}" already exists.`);
+      return;
+    }
+
     const newContext: Context = {
-      id: uuidv4(),
+      id,
       name,
-      position: get().contexts.length + 1,
+      position: get().contexts.length,
     };
     
     const updatedContexts = [...get().contexts, newContext].sort((a, b) => a.position - b.position);
@@ -151,10 +157,16 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   addColumn: async (name) => {
+    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
+    if (get().columns.find(c => c.id === id)) {
+      console.error(`Column with ID "${id}" already exists.`);
+      return;
+    }
+
     const newColumn: Column = {
-      id: uuidv4(),
+      id,
       name,
-      position: get().columns.length + 1,
+      position: get().columns.length,
     };
     
     const updatedColumns = [...get().columns, newColumn].sort((a, b) => a.position - b.position);
