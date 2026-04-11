@@ -1,26 +1,31 @@
-import { OmniBoardData, Task, Context } from '@/types';
+import { TohdohBoardData, Task, Context, Column } from '@/types';
 import { StorageProvider } from './StorageProvider';
 
-const STORAGE_KEY = 'omniboard-data';
+const STORAGE_KEY = 'tohdohboard-data';
 
-const DEFAULT_DATA: OmniBoardData = {
+const DEFAULT_DATA: TohdohBoardData = {
   tasks: [],
   contexts: [
-    { id: 'work', name: 'Work', order: 1 },
-    { id: 'school', name: 'School', order: 2 },
-    { id: 'projects', name: 'Projects', order: 3 }
+    { id: 'work', name: 'Work', position: 1 },
+    { id: 'school', name: 'School', position: 2 },
+    { id: 'projects', name: 'Projects', position: 3 }
+  ],
+  columns: [
+    { id: 'todo', name: 'To Do', position: 1 },
+    { id: 'doing', name: 'Doing', position: 2 },
+    { id: 'done', name: 'Done', position: 3 }
   ]
 };
 
 export class LocalStorageProvider implements StorageProvider {
-  async getData(): Promise<OmniBoardData> {
+  async getData(): Promise<TohdohBoardData> {
     if (typeof window === 'undefined') return DEFAULT_DATA;
     const data = localStorage.getItem(STORAGE_KEY);
     if (!data) return DEFAULT_DATA;
     return JSON.parse(data);
   }
 
-  async saveData(data: OmniBoardData): Promise<void> {
+  async saveData(data: TohdohBoardData): Promise<void> {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
@@ -66,8 +71,48 @@ export class LocalStorageProvider implements StorageProvider {
   async deleteSwimlane(contextId: string): Promise<void> {
     const data = await this.getData();
     data.contexts = data.contexts.filter(c => c.id !== contextId);
-    // Optional: filter tasks for this context?
     data.tasks = data.tasks.filter(t => t.contextId !== contextId);
+    await this.saveData(data);
+  }
+
+  async updateSwimlaneOrder(laneIds: string[]): Promise<void> {
+    const data = await this.getData();
+    data.contexts = data.contexts.map(c => {
+      const position = laneIds.indexOf(c.id);
+      return position !== -1 ? { ...c, position } : c;
+    });
+    await this.saveData(data);
+  }
+
+  async getColumns(): Promise<Column[]> {
+    const data = await this.getData();
+    return data.columns;
+  }
+
+  async saveColumn(column: Column): Promise<void> {
+    const data = await this.getData();
+    const index = data.columns.findIndex(c => c.id === column.id);
+    if (index !== -1) {
+      data.columns[index] = column;
+    } else {
+      data.columns.push(column);
+    }
+    await this.saveData(data);
+  }
+
+  async deleteColumn(columnId: string): Promise<void> {
+    const data = await this.getData();
+    data.columns = data.columns.filter(c => c.id !== columnId);
+    data.tasks = data.tasks.filter(t => t.status !== columnId);
+    await this.saveData(data);
+  }
+
+  async updateColumnOrder(columnIds: string[]): Promise<void> {
+    const data = await this.getData();
+    data.columns = data.columns.map(c => {
+      const position = columnIds.indexOf(c.id);
+      return position !== -1 ? { ...c, position } : c;
+    });
     await this.saveData(data);
   }
 }

@@ -1,14 +1,20 @@
-import { Task, Context, OmniBoardData } from '@/types';
+import { Task, Context, Column, TohdohBoardData } from '@/types';
 
 export interface StorageProvider {
-  getData(): Promise<OmniBoardData>;
-  saveData(data: OmniBoardData): Promise<void>;
+  getData(): Promise<TohdohBoardData>;
+  saveData(data: TohdohBoardData): Promise<void>;
   
-  // Specific methods mentioned in requirements
   getTasks(): Promise<Task[]>;
   saveTask(task: Task): Promise<void>;
   deleteTask(taskId: string): Promise<void>;
+  
   getSwimlanes(): Promise<Context[]>;
   saveSwimlane(context: Context): Promise<void>;
   deleteSwimlane(contextId: string): Promise<void>;
+  updateSwimlaneOrder(laneIds: string[]): Promise<void>;
+  
+  getColumns(): Promise<Column[]>;
+  saveColumn(column: Column): Promise<void>;
+  deleteColumn(columnId: string): Promise<void>;
+  updateColumnOrder(columnIds: string[]): Promise<void>;
 }

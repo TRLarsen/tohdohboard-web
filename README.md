@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TohdohBoard Web
 
-## Getting Started
+A minimalist 2D Kanban board for task management, built with Next.js (App Router), TypeScript, Tailwind CSS, and dnd-kit.
+
+## Overview
+TohdohBoard is a flexible task management tool that organizes tasks into both Swimlanes (Contexts) and Columns (Statuses), creating a 2D matrix.
+
+## Running the Web App
 
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Network & Tailnet Access
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The web app is configured to dynamically connect to the TohdohBoard backend at your server's current IP address (port 3001).
 
-## Learn More
+To access the web app from other devices in your Tailnet:
+1. Ensure the **TohdohBoard Backend** is running on your server.
+2. Ensure you have the **Next.js app** running (`npm run dev`).
+3. Access the board via your server's Tailscale hostname: `http://<tailscale-hostname>:3000`.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*Note: For a truly persistent web setup, it's recommended to run the build version with a process manager like `pm2`:*
+```bash
+npm run build
+pm2 start npm --name "tohdoh-web" -- start
+```

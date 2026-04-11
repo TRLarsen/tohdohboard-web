@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '@/types';
 import { MoreVertical, Clock } from 'lucide-react';
-import { STATUS_COLORS } from '@/constants';
+import { useStore } from '@/store/useStore';
 
 interface TaskCardProps {
   task: Task;
@@ -13,6 +13,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
+  const { editMode } = useStore();
   const {
     attributes,
     listeners,
@@ -26,6 +27,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
       type: 'Task',
       task,
     },
+    disabled: editMode,
   });
 
   const style = {
@@ -40,8 +42,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
       style={style}
       {...attributes}
       {...listeners}
-      onClick={() => onClick(task)}
-      className="p-3 mb-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-neutral-500 transition-colors group"
+      onClick={() => {
+        if (!editMode) onClick(task);
+      }}
+      className={`p-3 mb-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-sm ${!editMode ? 'cursor-grab active:cursor-grabbing hover:border-neutral-500' : 'opacity-50'} transition-colors group`}
     >
       <div className="flex items-start justify-between">
         <h4 className="text-sm font-medium text-neutral-200 line-clamp-2">{task.title}</h4>
@@ -55,7 +59,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
       )}
       
       <div className="mt-3 flex items-center justify-between">
-        <div className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[task.status]}`} />
+        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
         <div className="flex items-center text-[10px] text-neutral-500">
           <Clock size={10} className="mr-1" />
           <span>{new Date(task.updatedAt).toLocaleDateString()}</span>
@@ -64,3 +68,4 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
     </div>
   );
 };
+

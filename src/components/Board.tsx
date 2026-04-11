@@ -15,20 +15,25 @@ import {
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { useStore } from '@/store/useStore';
 import { Swimlane } from './Swimlane';
-import { Task, TaskStatus, Context } from '@/types';
+import { Task, Context, Column as ColumnType } from '@/types';
 import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
 import { ContextModal } from './ContextModal';
-import { Plus, LayoutGrid } from 'lucide-react';
+import { ColumnModal } from './ColumnModal';
+import { Plus, LayoutGrid, Settings, X, Columns } from 'lucide-react';
 
 export const Board: React.FC = () => {
   const { 
     tasks, 
     contexts, 
+    columns,
     loading, 
     loadData, 
     moveTask, 
@@ -37,17 +42,28 @@ export const Board: React.FC = () => {
     deleteTask,
     addContext,
     updateContext,
-    deleteContext
+    deleteContext,
+    updateSwimlaneOrder,
+    addColumn,
+    updateColumn,
+    deleteColumn,
+    updateColumnOrder,
+    editMode,
+    setEditMode
   } = useStore();
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeSwimlane, setActiveSwimlane] = useState<Context | null>(null);
+  
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
-  const [defaultStatus, setDefaultStatus] = useState<TaskStatus | undefined>(undefined);
+  const [defaultStatus, setDefaultStatus] = useState<string | undefined>(undefined);
   const [defaultContextId, setDefaultContextId] = useState<string | undefined>(undefined);
   
   const [isContextModalOpen, setIsContextModalOpen] = useState(false);
   const [selectedContext, setSelectedContext] = useState<Context | undefined>(undefined);
+
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -67,67 +83,73 @@ export const Board: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-pulse text-neutral-500 font-medium">Loading OmniBoard...</div>
+        <div className="animate-pulse text-neutral-500 font-medium">Loading TohdohBoard...</div>
       </div>
     );
   }
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = tasks.find((t) => t.id === active.id);
-    if (task) setActiveTask(task);
+    const type = active.data.current?.type;
+
+    if (type === 'Task') {
+      const task = tasks.find((t) => t.id === active.id);
+      if (task) setActiveTask(task);
+    } else if (type === 'Swimlane') {
+      const swimlane = contexts.find(c => `swimlane-${c.id}` === active.id);
+      if (swimlane) setActiveSwimlane(swimlane);
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    if (activeId === overId) return;
-
-    const isActiveATask = active.data.current?.type === 'Task';
-    const isOverAColumn = over.data.current?.type === 'Column';
-
-    if (isActiveATask && isOverAColumn) {
-      // Handled in onDragEnd for simplicity if we don't need live reordering between cells
-      // But for better UX, we could update state here
-    }
+    // Only handle task dragging over columns during Task Mode
+    if (editMode) return;
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
+    setActiveSwimlane(null);
 
     if (!over) return;
 
-    const activeId = active.id as string;
-
-    const activeTask = tasks.find(t => t.id === activeId);
-    if (!activeTask) return;
-
-    // Over a column
-    if (over.data.current?.type === 'Column') {
-      const { status, contextId } = over.data.current;
-      if (activeTask.status !== status || activeTask.contextId !== contextId) {
-        moveTask(activeId, status, contextId);
+    if (editMode && active.data.current?.type === 'Swimlane' && over.data.current?.type === 'Swimlane') {
+      const activeId = active.data.current.context.id;
+      const overId = over.data.current.context.id;
+      if (activeId !== overId) {
+        const oldIndex = contexts.findIndex(c => c.id === activeId);
+        const newIndex = contexts.findIndex(c => c.id === overId);
+        const newOrder = arrayMove(contexts.map(c => c.id), oldIndex, newIndex);
+        updateSwimlaneOrder(newOrder);
       }
       return;
     }
 
-    // Over another task
-    if (over.data.current?.type === 'Task') {
-      const overTask = over.data.current.task as Task;
-      if (activeTask.status !== overTask.status || activeTask.contextId !== overTask.contextId) {
-        moveTask(activeId, overTask.status, overTask.contextId);
+    if (!editMode && active.data.current?.type === 'Task') {
+      const activeId = active.id as string;
+      const activeTask = tasks.find(t => t.id === activeId);
+      if (!activeTask) return;
+
+      // Over a column
+      if (over.data.current?.type === 'Column') {
+        const { status, contextId } = over.data.current;
+        if (activeTask.status !== status || activeTask.contextId !== contextId) {
+          moveTask(activeId, status, contextId);
+        }
+        return;
       }
-      // Note: Reordering within column is not explicitly implemented in moveTask 
-      // but could be added by sorting tasks by a 'position' field.
+
+      // Over another task
+      if (over.data.current?.type === 'Task') {
+        const overTask = over.data.current.task as Task;
+        if (activeTask.status !== overTask.status || activeTask.contextId !== overTask.contextId) {
+          moveTask(activeId, overTask.status, overTask.contextId);
+        }
+      }
     }
   };
 
-  const handleAddTask = (status: TaskStatus, contextId: string) => {
+  const handleAddTask = (status: string, contextId: string) => {
     setSelectedTask(undefined);
     setDefaultStatus(status);
     setDefaultContextId(contextId);
@@ -139,7 +161,7 @@ export const Board: React.FC = () => {
     setIsTaskModalOpen(true);
   };
 
-  const handleSaveTask = (title: string, description: string, status: TaskStatus, contextId: string) => {
+  const handleSaveTask = (title: string, description: string, status: string, contextId: string) => {
     if (selectedTask) {
       updateTask({ ...selectedTask, title, description, status, contextId });
     } else {
@@ -167,33 +189,55 @@ export const Board: React.FC = () => {
           <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-900/40 text-white">
             <LayoutGrid size={24} />
           </div>
-          <h1 className="text-2xl font-black text-neutral-100 tracking-tight">OmniBoard</h1>
+          <h1 className="text-2xl font-black text-neutral-100 tracking-tight">TohdohBoard</h1>
         </div>
         
         <div className="flex gap-4">
           <button
-            onClick={() => {
-              setSelectedContext(undefined);
-              setIsContextModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all"
+            onClick={() => setEditMode(!editMode)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-all ${editMode ? 'bg-amber-600/20 border-amber-600 text-amber-500 hover:bg-amber-600/30' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'}`}
           >
-            <Plus size={16} />
-            Add Swimlane
+            {editMode ? <X size={16} /> : <Settings size={16} />}
+            {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
           </button>
-          
-          <button
-            onClick={() => {
-              setSelectedTask(undefined);
-              setDefaultStatus(undefined);
-              setDefaultContextId(undefined);
-              setIsTaskModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-900/20 transition-all"
-          >
-            <Plus size={16} />
-            New Task
-          </button>
+
+          {editMode && (
+            <button
+              onClick={() => setIsColumnModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all animate-in fade-in slide-in-from-right-4"
+            >
+              <Columns size={16} />
+              Manage Columns
+            </button>
+          )}
+
+          {!editMode && (
+            <>
+              <button
+                onClick={() => {
+                  setSelectedContext(undefined);
+                  setIsContextModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all"
+              >
+                <Plus size={16} />
+                Add Swimlane
+              </button>
+              
+              <button
+                onClick={() => {
+                  setSelectedTask(undefined);
+                  setDefaultStatus(undefined);
+                  setDefaultContextId(undefined);
+                  setIsTaskModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-900/20 transition-all"
+              >
+                <Plus size={16} />
+                New Task
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -206,16 +250,19 @@ export const Board: React.FC = () => {
       >
         <div className="flex-1 overflow-x-auto pb-10">
           <div className="min-w-full inline-block align-middle">
-            {contexts.sort((a, b) => a.order - b.order).map(context => (
-              <Swimlane
-                key={context.id}
-                context={context}
-                tasks={tasks}
-                onAddTask={handleAddTask}
-                onTaskClick={handleTaskClick}
-                onManageContext={handleManageContext}
-              />
-            ))}
+            <SortableContext items={contexts.map(c => `swimlane-${c.id}`)} strategy={verticalListSortingStrategy}>
+              {contexts.map(context => (
+                <Swimlane
+                  key={context.id}
+                  context={context}
+                  columns={columns}
+                  tasks={tasks}
+                  onAddTask={handleAddTask}
+                  onTaskClick={handleTaskClick}
+                  onManageContext={handleManageContext}
+                />
+              ))}
+            </SortableContext>
             
             {contexts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-neutral-800 rounded-2xl">
@@ -245,6 +292,11 @@ export const Board: React.FC = () => {
               <TaskCard task={activeTask} onClick={() => {}} />
             </div>
           ) : null}
+          {activeSwimlane ? (
+            <div className="opacity-80 p-4 bg-neutral-800 border-2 border-blue-500 rounded-lg pointer-events-none">
+              <h2 className="text-lg font-bold text-neutral-100">{activeSwimlane.name}</h2>
+            </div>
+          ) : null}
         </DragOverlay>
       </DndContext>
 
@@ -258,6 +310,7 @@ export const Board: React.FC = () => {
         defaultStatus={defaultStatus}
         defaultContextId={defaultContextId}
         contexts={contexts}
+        columns={columns}
       />
 
       <ContextModal
@@ -267,6 +320,16 @@ export const Board: React.FC = () => {
         onSave={handleSaveContext}
         onDelete={deleteContext}
         context={selectedContext}
+      />
+
+      <ColumnModal
+        isOpen={isColumnModalOpen}
+        onClose={() => setIsColumnModalOpen(false)}
+        columns={columns}
+        onAdd={addColumn}
+        onUpdate={updateColumn}
+        onDelete={deleteColumn}
+        onReorder={updateColumnOrder}
       />
     </div>
   );

@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Task, TaskStatus } from '@/types';
-import { STATUSES } from '@/constants';
+import { Task, Column as ColumnType } from '@/types';
 import { X, Trash2 } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string, description: string, status: TaskStatus, contextId: string) => void;
+  onSave: (title: string, description: string, status: string, contextId: string) => void;
   onDelete?: (taskId: string) => void;
   task?: Task;
-  defaultStatus?: TaskStatus;
+  defaultStatus?: string;
   defaultContextId?: string;
   contexts: { id: string, name: string }[];
+  columns: ColumnType[];
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -25,11 +25,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   defaultStatus,
   defaultContextId,
   contexts,
+  columns,
 }) => {
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
-  const [status, setStatus] = useState<TaskStatus>(
-    task?.status || defaultStatus || STATUSES[0]
+  const [status, setStatus] = useState<string>(
+    task?.status || defaultStatus || (columns.length > 0 ? columns[0].id : '')
   );
   const [contextId, setContextId] = useState(
     task?.contextId || defaultContextId || (contexts.length > 0 ? contexts[0].id : '')
@@ -39,7 +40,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !contextId) return;
+    if (!title.trim() || !contextId || !status) return;
     onSave(title, description, status, contextId);
     onClose();
   };
@@ -85,11 +86,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <label className="block text-xs font-medium text-neutral-500 uppercase mb-1">Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                onChange={(e) => setStatus(e.target.value)}
                 className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-200 focus:outline-none focus:border-blue-500 transition-colors"
               >
-                {STATUSES.map(s => (
-                  <option key={s} value={s}>{s}</option>
+                {columns.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>

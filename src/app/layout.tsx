@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmniBoard | 2D Kanban",
-  description: "A minimalist 2D Kanban board for task management",
+  title: "TohdohBoard | 2D Kanban",
+  description: "A 2D Kanban board for task management",
 };
 
 export default function RootLayout({
