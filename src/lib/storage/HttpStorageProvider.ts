@@ -93,12 +93,16 @@ export class HttpStorageProvider implements StorageProvider {
   }
 
   async updateSwimlaneOrder(laneIds: string[]): Promise<void> {
-    const data = await this.getData();
-    data.contexts = data.contexts.map(c => {
-      const position = laneIds.indexOf(c.id);
-      return position !== -1 ? { ...c, position } : c;
-    });
-    await this.saveData(data);
+    try {
+      const data = await this.getData();
+      const updatedContexts = data.contexts.map(c => {
+        const index = laneIds.indexOf(c.id);
+        return { ...c, position: index !== -1 ? index : c.position };
+      });
+      await this.saveData({ ...data, contexts: updatedContexts });
+    } catch (error) {
+      console.error('Failed to update swimlane order:', error);
+    }
   }
 
   async getColumns(): Promise<Column[]> {
@@ -125,12 +129,16 @@ export class HttpStorageProvider implements StorageProvider {
   }
 
   async updateColumnOrder(columnIds: string[]): Promise<void> {
-    const data = await this.getData();
-    data.columns = data.columns.map(c => {
-      const position = columnIds.indexOf(c.id);
-      return position !== -1 ? { ...c, position } : c;
-    });
-    await this.saveData(data);
+    try {
+      const data = await this.getData();
+      const updatedColumns = data.columns.map(c => {
+        const index = columnIds.indexOf(c.id);
+        return { ...c, position: index !== -1 ? index : c.position };
+      });
+      await this.saveData({ ...data, columns: updatedColumns });
+    } catch (error) {
+      console.error('Failed to update column order:', error);
+    }
   }
 }
 

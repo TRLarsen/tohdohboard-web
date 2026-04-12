@@ -119,7 +119,9 @@ export const Board: React.FC = () => {
       if (activeId !== overId) {
         const oldIndex = contexts.findIndex(c => c.id === activeId);
         const newIndex = contexts.findIndex(c => c.id === overId);
-        const newOrder = arrayMove(contexts.map(c => c.id), oldIndex, newIndex);
+        
+        // Use raw IDs for the backend update
+        const newOrder = arrayMove(contexts, oldIndex, newIndex).map(c => c.id);
         updateSwimlaneOrder(newOrder);
       }
       return;
