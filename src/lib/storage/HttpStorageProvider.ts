@@ -1,24 +1,18 @@
 import { TohdohBoardData, Task, Context, Column } from '@/types';
 import { StorageProvider } from './StorageProvider';
 
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    return `http://${window.location.hostname}:3001/api/data`;
-  }
-  return 'http://127.0.0.1:3001/api/data';
-};
-
-const API_URL = getApiUrl();
-
-const DEFAULT_DATA: TohdohBoardData = {
-  tasks: [],
-  contexts: [],
-  columns: []
-};
-
 export class HttpStorageProvider implements StorageProvider {
+  private getApiUrl(): string {
+    if (typeof window !== 'undefined') {
+      return `http://${window.location.hostname}:3001/api/data`;
+    }
+    return 'http://127.0.0.1:3001/api/data';
+  }
+
   async getData(): Promise<TohdohBoardData> {
-    const response = await fetch(API_URL);
+    const response = await fetch(this.getApiUrl(), {
+      cache: 'no-store'
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
@@ -27,7 +21,7 @@ export class HttpStorageProvider implements StorageProvider {
 
   async saveData(data: TohdohBoardData): Promise<void> {
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch(this.getApiUrl(), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -35,7 +29,7 @@ export class HttpStorageProvider implements StorageProvider {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        throw new Error('Failed to save data');
+        throw new Error(`Failed to save data: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error saving to backend:', error);
