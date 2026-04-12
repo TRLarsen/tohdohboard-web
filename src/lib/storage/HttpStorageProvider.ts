@@ -18,16 +18,11 @@ const DEFAULT_DATA: TohdohBoardData = {
 
 export class HttpStorageProvider implements StorageProvider {
   async getData(): Promise<TohdohBoardData> {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching from backend:', error);
-      return DEFAULT_DATA;
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data: ${response.statusText}`);
     }
+    return await response.json();
   }
 
   async saveData(data: TohdohBoardData): Promise<void> {

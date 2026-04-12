@@ -151,9 +151,17 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   updateSwimlaneOrder: async (laneIds) => {
-    await storageProvider.updateSwimlaneOrder(laneIds);
-    const data = await storageProvider.getData();
-    set({ contexts: data.contexts.sort((a, b) => a.position - b.position) });
+    const updatedContexts = get().contexts.map(c => {
+      const index = laneIds.indexOf(c.id);
+      return { ...c, position: index !== -1 ? index : c.position };
+    }).sort((a, b) => a.position - b.position);
+    
+    set({ contexts: updatedContexts });
+    await storageProvider.saveData({ 
+      tasks: get().tasks, 
+      contexts: updatedContexts, 
+      columns: get().columns 
+    });
   },
 
   addColumn: async (name) => {
@@ -199,8 +207,16 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   updateColumnOrder: async (columnIds) => {
-    await storageProvider.updateColumnOrder(columnIds);
-    const data = await storageProvider.getData();
-    set({ columns: data.columns.sort((a, b) => a.position - b.position) });
+    const updatedColumns = get().columns.map(c => {
+      const index = columnIds.indexOf(c.id);
+      return { ...c, position: index !== -1 ? index : c.position };
+    }).sort((a, b) => a.position - b.position);
+    
+    set({ columns: updatedColumns });
+    await storageProvider.saveData({ 
+      tasks: get().tasks, 
+      contexts: get().contexts, 
+      columns: updatedColumns 
+    });
   },
 }));
