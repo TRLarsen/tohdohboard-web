@@ -4,7 +4,8 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Task } from '@/types';
-import { MoreVertical, Clock } from 'lucide-react';
+import { MoreVertical, Clock, CalendarDays } from 'lucide-react';
+import { doneColumnId, formatDueDate, localToday } from '@/lib/board';
 import { useStore } from '@/store/useStore';
 
 interface TaskCardProps {
@@ -13,7 +14,9 @@ interface TaskCardProps {
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
-  const { editMode } = useStore();
+  const { editMode, columns } = useStore();
+  // Both sides are local "YYYY-MM-DD" strings, so string order is date order (no UTC shift).
+  const overdue = !!task.dueDate && task.dueDate < localToday() && task.status !== doneColumnId(columns);
   const {
     attributes,
     listeners,
@@ -58,8 +61,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
         <p className="mt-1 text-xs text-neutral-400 line-clamp-2">{task.description}</p>
       )}
       
-      <div className="mt-3 flex items-center justify-between">
-        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+          {task.dueDate && (
+            <span
+              title={`Due ${task.dueDate}${overdue ? ' (overdue)' : ''}`}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium whitespace-nowrap ${overdue ? 'bg-red-950/60 text-red-300 border-red-800' : 'bg-neutral-900 text-neutral-400 border-neutral-700'}`}
+            >
+              <CalendarDays size={10} />
+              {formatDueDate(task.dueDate)}
+            </span>
+          )}
+        </div>
         <div className="flex items-center text-[10px] text-neutral-500">
           <Clock size={10} className="mr-1" />
           <span>{new Date(task.updatedAt).toLocaleDateString()}</span>
