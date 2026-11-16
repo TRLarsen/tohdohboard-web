@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import { Task, Column as ColumnType } from '@/types';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Archive } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (title: string, description: string, status: string, contextId: string) => void;
   onDelete?: (taskId: string) => void;
+  onArchive?: (taskId: string) => void;
   task?: Task;
   defaultStatus?: string;
   defaultContextId?: string;
@@ -21,6 +22,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSave,
   onDelete,
+  onArchive,
   task,
   defaultStatus,
   defaultContextId,
@@ -109,22 +111,39 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
           
-          <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
-            {task && onDelete ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onDelete(task.id);
-                  onClose();
-                }}
-                className="flex items-center gap-1.5 text-red-500 hover:text-red-400 text-sm font-medium transition-colors"
-              >
-                <Trash2 size={16} />
-                Delete
-              </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-800">
+            {task ? (
+              <div className="flex items-center gap-4">
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDelete(task.id);
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 text-red-500 hover:text-red-400 text-sm font-medium transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                )}
+                {onArchive && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onArchive(task.id);
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 text-neutral-400 hover:text-amber-500 text-sm font-medium transition-colors"
+                  >
+                    <Archive size={16} />
+                    Archive
+                  </button>
+                )}
+              </div>
             ) : <div />}
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 ml-auto">
               <button
                 type="button"
                 onClick={onClose}

@@ -14,6 +14,11 @@ export interface Task {
   updatedAt: string;
 }
 
+/** A task moved off the board by the backend's archive (manually or by the done-column sweep). */
+export interface ArchivedTask extends Task {
+  archivedAt: string;
+}
+
 export interface Context {
   id: string;
   name: string;

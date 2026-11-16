@@ -3,10 +3,11 @@
 import React from 'react';
 import { Context, Task, Column as ColumnType } from '@/types';
 import { Column } from './Column';
-import { Settings, GripVertical } from 'lucide-react';
+import { Settings, GripVertical, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { doneColumnId } from '@/lib/board';
 
 interface SwimlaneProps {
   context: Context;
@@ -25,7 +26,11 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
   onTaskClick,
   onManageContext 
 }) => {
-  const { editMode } = useStore();
+  const { editMode, collapsedLanes, toggleLaneCollapsed, archiveTasks } = useStore();
+  const collapsed = collapsedLanes.includes(context.id);
+  const laneTasks = tasks.filter(t => t.contextId === context.id);
+  const doneId = doneColumnId(columns);
+  const bodyId = `swimlane-body-${context.id}`;
 
   const {
     attributes,
@@ -63,10 +68,25 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
               <GripVertical size={20} />
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => toggleLaneCollapsed(context.id)}
+            aria-expanded={!collapsed}
+            aria-controls={bodyId}
+            aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${context.name}`}
+            className="flex items-center justify-center w-10 h-10 -ml-2 md:w-8 md:h-8 shrink-0 text-neutral-500 hover:text-neutral-300 rounded-md hover:bg-neutral-800 transition-colors"
+          >
+            <ChevronDown size={18} className={`transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+          </button>
           <h2 title={context.name} className="text-lg font-bold text-neutral-100 tracking-tight truncate">{context.name}</h2>
           <span className="hidden md:inline px-2 py-0.5 text-[10px] font-medium bg-neutral-800 text-neutral-400 rounded-full border border-neutral-700 uppercase">
             {context.id}
           </span>
+          {collapsed && (
+            <span className="text-xs text-neutral-500 whitespace-nowrap">
+              {laneTasks.length} {laneTasks.length === 1 ? 'task' : 'tasks'}
+            </span>
+          )}
         </div>
         <button 
           onClick={() => onManageContext(context)}
@@ -76,19 +96,25 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
         </button>
       </div>
       
-      <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-        {columns.map(column => (
-          <Column
-            key={`${context.id}:${column.id}`}
-            id={`${context.id}:${column.id}`}
-            contextId={context.id}
-            column={column}
-            tasks={tasks.filter(t => t.status === column.id && t.contextId === context.id)}
-            onAddTask={onAddTask}
-            onTaskClick={onTaskClick}
-          />
-        ))}
-      </div>
+      {!collapsed && (
+        <div id={bodyId} className="flex gap-4 overflow-x-auto pb-4 snap-x">
+          {columns.map(column => {
+            const columnTasks = laneTasks.filter(t => t.status === column.id);
+            return (
+              <Column
+                key={`${context.id}:${column.id}`}
+                id={`${context.id}:${column.id}`}
+                contextId={context.id}
+                column={column}
+                tasks={columnTasks}
+                onAddTask={onAddTask}
+                onTaskClick={onTaskClick}
+                onArchiveAll={column.id === doneId ? () => archiveTasks(columnTasks.map(t => t.id)) : undefined}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

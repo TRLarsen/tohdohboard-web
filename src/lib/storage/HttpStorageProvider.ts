@@ -1,12 +1,28 @@
-import { TohdohBoardData, Task, Context, Column } from '@/types';
+import { TohdohBoardData, Task, Context, Column, ArchivedTask } from '@/types';
 import { StorageProvider } from './StorageProvider';
 
 export class HttpStorageProvider implements StorageProvider {
-  private getApiUrl(): string {
+  private getApiBase(): string {
     if (typeof window !== 'undefined') {
-      return `http://${window.location.hostname}:3001/api/data`;
+      return `http://${window.location.hostname}:3001/api`;
     }
-    return 'http://127.0.0.1:3001/api/data';
+    return 'http://127.0.0.1:3001/api';
+  }
+
+  private getApiUrl(): string {
+    return `${this.getApiBase()}/data`;
+  }
+
+  private async postJson<T>(path: string, body: unknown): Promise<T> {
+    const response = await fetch(`${this.getApiBase()}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      throw new Error(`POST ${path} failed: ${response.statusText}`);
+    }
+    return await response.json();
   }
 
   async getData(): Promise<TohdohBoardData> {
@@ -128,6 +144,22 @@ export class HttpStorageProvider implements StorageProvider {
     } catch (error) {
       console.error('Failed to update column order:', error);
     }
+  }
+
+  async getArchive(): Promise<ArchivedTask[]> {
+    const response = await fetch(`${this.getApiBase()}/archive`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch archive: ${response.statusText}`);
+    }
+    return (await response.json()).tasks;
+  }
+
+  async archiveTasks(taskIds: string[]): Promise<number> {
+    return (await this.postJson<{ archived: number }>('/archive', { taskIds })).archived;
+  }
+
+  async restoreTasks(taskIds: string[]): Promise<number> {
+    return (await this.postJson<{ restored: number }>('/archive/restore', { taskIds })).restored;
   }
 }
 

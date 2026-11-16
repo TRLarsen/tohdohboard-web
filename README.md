@@ -5,6 +5,14 @@ A minimalist 2D Kanban board for task management, built with Next.js (App Router
 ## Overview
 TohdohBoard is a flexible task management tool that organizes tasks into both Swimlanes (Contexts) and Columns (Statuses), creating a 2D matrix.
 
+## Collapsing & Archiving
+
+- Click the chevron next to a swimlane's name to collapse it. Collapsed lanes are remembered per device (browser storage), not on the board.
+- **Archive** in a swimlane's Done column moves that lane's done tasks to the archive; a single task can be archived from its edit dialog. The header's **Archive** button lists archived tasks and restores them.
+- The "Done" column is the column with id `done`, the backend's default `archive.done_column`. Only it gets the bulk **Archive** button. If the backend is configured with another done column, the web app does not know: archive single tasks from their dialog instead.
+- The backend also archives done tasks automatically after a while. The thresholds (`[archive]` in the backend's `config.toml`) are configured there, not in the web app.
+- The board reloads when you return to its tab or window, so tasks archived automatically or changed on another device show up there without a manual refresh.
+
 ## Running the Web App
 
 First, run the development server:
