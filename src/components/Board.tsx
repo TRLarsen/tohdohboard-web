@@ -28,7 +28,8 @@ import { TaskModal } from './TaskModal';
 import { ContextModal } from './ContextModal';
 import { ColumnModal } from './ColumnModal';
 import { ArchiveModal } from './ArchiveModal';
-import { Plus, LayoutGrid, Settings, X, Columns, Archive } from 'lucide-react';
+import { TokenModal, SaveErrorBanner } from './ConnectionStatus';
+import { Plus, LayoutGrid, Settings, X, Columns, Archive, KeyRound } from 'lucide-react';
 
 export const Board: React.FC = () => {
   const { 
@@ -36,6 +37,10 @@ export const Board: React.FC = () => {
     contexts, 
     columns,
     loading, 
+    loaded,
+    loadError,
+    hasToken,
+    forgetToken,
     loadData, 
     refresh,
     moveTask, 
@@ -101,6 +106,23 @@ export const Board: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-pulse text-neutral-500 font-medium">Loading TohdohBoard...</div>
+      </div>
+    );
+  }
+
+  // Never show (and later save) an empty board when loading failed.
+  if (!loaded) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-96 text-center">
+        <p className="font-medium text-neutral-200">Couldn&apos;t load the board.</p>
+        <p className="text-sm text-neutral-500">{loadError}</p>
+        <button
+          onClick={loadData}
+          className="px-6 py-2.5 bg-neutral-800 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 hover:bg-neutral-700 transition-colors"
+        >
+          Retry
+        </button>
+        <TokenModal />
       </div>
     );
   }
@@ -263,6 +285,17 @@ export const Board: React.FC = () => {
                 <Plus size={16} />
                 New Task
               </button>
+
+              {hasToken && (
+                <button
+                  onClick={() => window.confirm('Forget the access token saved on this device?') && forgetToken()}
+                  title="Forget access token"
+                  aria-label="Forget access token"
+                  className="flex items-center justify-center px-3 py-2.5 md:py-2 text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg border border-neutral-700 transition-all"
+                >
+                  <KeyRound size={16} />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -351,6 +384,8 @@ export const Board: React.FC = () => {
       />
 
       <ArchiveModal />
+      <TokenModal />
+      <SaveErrorBanner />
 
       <ColumnModal
         isOpen={isColumnModalOpen}

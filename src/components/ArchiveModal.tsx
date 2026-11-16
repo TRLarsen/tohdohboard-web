@@ -5,7 +5,7 @@ import { X, ArchiveRestore } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 export const ArchiveModal: React.FC = () => {
-  const { archiveOpen, setArchiveOpen, archivedTasks, contexts, restoreTasks } = useStore();
+  const { archiveOpen, setArchiveOpen, archivedTasks, archiveError, contexts, restoreTasks } = useStore();
 
   if (!archiveOpen) return null;
 
@@ -43,7 +43,9 @@ export const ArchiveModal: React.FC = () => {
             <li className="px-4 py-10 text-center text-sm text-neutral-500">No archived tasks.</li>
           )}
           {!archivedTasks && (
-            <li className="px-4 py-10 text-center text-sm text-neutral-500 animate-pulse">Loading…</li>
+            <li className={`px-4 py-10 text-center text-sm text-neutral-500 ${archiveError ? '' : 'animate-pulse'}`}>
+              {archiveError ? `Couldn't load the archive: ${archiveError}` : 'Loading…'}
+            </li>
           )}
         </ul>
       </div>
