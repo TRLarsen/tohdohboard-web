@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The UI uses no Tauri IPC, so the main window is granted nothing.",
+  "windows": ["main"],
+  "permissions": []
+}

@@ -1,0 +1,24 @@
+[package]
+name = "tohdohboard"
+version = "0.1.0"
+description = "TohdohBoard as a native desktop app (Tauri shell around the static web export)"
+license = "MIT"
+edition = "2021"
+publish = false
+
+[lib]
+name = "tohdohboard_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
