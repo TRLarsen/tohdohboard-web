@@ -7,7 +7,7 @@ import { X, Trash2, Archive } from 'lucide-react';
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string, description: string, status: string, contextId: string) => void;
+  onSave: (title: string, description: string, status: string, contextId: string, dueDate?: string) => void;
   onDelete?: (taskId: string) => void;
   onArchive?: (taskId: string) => void;
   task?: Task;
@@ -34,6 +34,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [status, setStatus] = useState<string>(
     task?.status || defaultStatus || (columns.length > 0 ? columns[0].id : '')
   );
+  const [dueDate, setDueDate] = useState(task?.dueDate || '');
   const [contextId, setContextId] = useState(
     task?.contextId || defaultContextId || (contexts.length > 0 ? contexts[0].id : '')
   );
@@ -43,7 +44,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !contextId || !status) return;
-    onSave(title, description, status, contextId);
+    onSave(title, description, status, contextId, dueDate || undefined);
     onClose();
   };
 
@@ -111,6 +112,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
           
+          <div>
+            <label htmlFor="task-due-date" className="block text-xs font-medium text-neutral-500 uppercase mb-1">Due date</label>
+            <div className="flex gap-2">
+              <input
+                id="task-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="flex-1 min-w-0 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-200 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+              {dueDate && (
+                <button
+                  type="button"
+                  onClick={() => setDueDate('')}
+                  className="px-3 py-2 text-sm font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 border border-neutral-700 rounded-lg transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-800">
             {task ? (
               <div className="flex items-center gap-4">

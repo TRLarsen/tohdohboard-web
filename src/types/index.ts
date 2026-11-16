@@ -12,6 +12,8 @@ export interface Task {
   contextId: string;
   createdAt: string;
   updatedAt: string;
+  /** Local calendar date "YYYY-MM-DD"; omitted (not null/"") when there is none. */
+  dueDate?: string;
 }
 
 /** A task moved off the board by the backend's archive (manually or by the done-column sweep). */

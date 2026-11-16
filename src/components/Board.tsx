@@ -29,6 +29,7 @@ import { ContextModal } from './ContextModal';
 import { ColumnModal } from './ColumnModal';
 import { ArchiveModal } from './ArchiveModal';
 import { TokenModal, SaveErrorBanner } from './ConnectionStatus';
+import { withDueDate } from '@/lib/board';
 import { Plus, LayoutGrid, Settings, X, Columns, Archive, KeyRound } from 'lucide-react';
 
 export const Board: React.FC = () => {
@@ -202,11 +203,11 @@ export const Board: React.FC = () => {
     setIsTaskModalOpen(true);
   };
 
-  const handleSaveTask = (title: string, description: string, status: string, contextId: string) => {
+  const handleSaveTask = (title: string, description: string, status: string, contextId: string, dueDate?: string) => {
     if (selectedTask) {
-      updateTask({ ...selectedTask, title, description, status, contextId });
+      updateTask(withDueDate({ ...selectedTask, title, description, status, contextId }, dueDate));
     } else {
-      addTask(title, description, status, contextId);
+      addTask(title, description, status, contextId, dueDate);
     }
   };
 

@@ -6,7 +6,7 @@ import {
   getAccessToken,
   setAccessToken,
 } from '@/lib/storage/HttpStorageProvider';
-import { unarchiveTask } from '@/lib/board';
+import { unarchiveTask, withDueDate } from '@/lib/board';
 import { v4 as uuidv4 } from 'uuid';
 
 // Which swimlanes are collapsed is a per-device view preference, so it lives in localStorage
@@ -78,7 +78,7 @@ interface BoardState {
   submitToken: (token: string) => void;
   forgetToken: () => void;
   dismissTokenPrompt: () => void;
-  addTask: (title: string, description: string, status: string, contextId: string) => Promise<void>;
+  addTask: (title: string, description: string, status: string, contextId: string, dueDate?: string) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   moveTask: (taskId: string, status: string, contextId: string) => Promise<void>;
@@ -182,8 +182,8 @@ export const useStore = create<BoardState>((set, get) => ({
 
   dismissTokenPrompt: () => set({ needsToken: false }),
 
-  addTask: async (title, description, status, contextId) => {
-    const newTask: Task = {
+  addTask: async (title, description, status, contextId, dueDate) => {
+    const newTask: Task = withDueDate({
       id: uuidv4(),
       title,
       description,
@@ -191,7 +191,7 @@ export const useStore = create<BoardState>((set, get) => ({
       contextId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    }, dueDate);
     
     const updatedTasks = [...get().tasks, newTask];
     set({ tasks: updatedTasks });

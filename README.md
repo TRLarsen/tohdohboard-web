@@ -13,6 +13,10 @@ TohdohBoard is a flexible task management tool that organizes tasks into both Sw
 - The backend also archives done tasks automatically after a while. The thresholds (`[archive]` in the backend's `config.toml`) are configured there, not in the web app.
 - The board reloads when you return to its tab or window, so tasks archived automatically or changed on another device show up there without a manual refresh.
 
+## Due Dates
+
+A task can have an optional due date (set or clear it in the task dialog). Cards show it as a small badge, red once the date has passed unless the task is in the Done column. Tasks with a due date that are not done also appear in the backend's calendar feed, `/api/calendar.ics`, which calendar apps can subscribe to (see the backend README).
+
 ## Running the Web App
 
 First, run the development server:
