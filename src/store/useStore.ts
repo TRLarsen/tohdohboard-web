@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { Task, Context, Column, ArchivedTask, TohdohBoardData } from '@/types';
-import { httpStorageProvider as storageProvider } from '@/lib/storage/HttpStorageProvider';
+import {
+  httpStorageProvider as storageProvider,
+  UnauthorizedError,
+  getAccessToken,
+  setAccessToken,
+} from '@/lib/storage/HttpStorageProvider';
 import { unarchiveTask } from '@/lib/board';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -32,20 +37,37 @@ function enqueueWrite<T>(write: () => Promise<T>): Promise<T> {
   return run;
 }
 
-const boardState = (data: TohdohBoardData) => ({
-  tasks: data.tasks,
-  contexts: data.contexts.sort((a, b) => a.position - b.position),
-  columns: data.columns.sort((a, b) => a.position - b.position),
-});
+// The document as last loaded, so saves keep top-level fields this app doesn't know about.
+let loadedDoc: Partial<TohdohBoardData> = {};
+
+const boardState = (data: TohdohBoardData) => {
+  loadedDoc = data;
+  return {
+    tasks: data.tasks,
+    contexts: data.contexts.sort((a, b) => a.position - b.position),
+    columns: data.columns.sort((a, b) => a.position - b.position),
+  };
+};
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const needsTokenIf = (error: unknown) => (error instanceof UnauthorizedError ? { needsToken: true } : {});
 
 interface BoardState {
   tasks: Task[];
   contexts: Context[];
   columns: Column[];
   loading: boolean;
+  /** True once the board was loaded from the server; saving is refused until then. */
+  loaded: boolean;
+  loadError: string | null;
+  saveError: string | null;
+  /** The server answered 401 and accepts a bearer token: ask the user for one. */
+  needsToken: boolean;
+  hasToken: boolean;
   editMode: boolean;
   collapsedLanes: string[];
-  archivedTasks: ArchivedTask[] | null; // null while (re)loading
+  archivedTasks: ArchivedTask[] | null; // null while (re)loading or after an error
+  archiveError: string | null;
   archiveOpen: boolean;
   
   // Actions
@@ -53,6 +75,9 @@ interface BoardState {
   loadData: () => Promise<void>;
   refresh: () => Promise<void>;
   save: () => Promise<void>;
+  submitToken: (token: string) => void;
+  forgetToken: () => void;
+  dismissTokenPrompt: () => void;
   addTask: (title: string, description: string, status: string, contextId: string) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -80,28 +105,34 @@ export const useStore = create<BoardState>((set, get) => ({
   contexts: [],
   columns: [],
   loading: true,
+  loaded: false,
+  loadError: null,
+  saveError: null,
+  needsToken: false,
+  hasToken: getAccessToken() !== null,
   editMode: false,
   collapsedLanes: readCollapsedLanes(),
   archivedTasks: null,
+  archiveError: null,
   archiveOpen: false,
 
   setEditMode: (editMode) => set({ editMode }),
 
   loadData: async () => {
-    set({ loading: true });
+    set({ loading: true, loadError: null });
     try {
       const data = await storageProvider.getData();
-      set({ ...boardState(data), loading: false });
+      set({ ...boardState(data), loading: false, loaded: true });
     } catch (error) {
-      console.error('Failed to load data from server, falling back to empty state', error);
-      set({ loading: false });
+      console.error('Failed to load data from server', error);
+      set({ loading: false, loadError: errorMessage(error), ...needsTokenIf(error) });
     }
   },
 
   // Picks up changes made elsewhere (another device, the server's auto-archive). Skipped while
   // local changes are on their way, and dropped if one started meanwhile, so it never undoes them.
   refresh: async () => {
-    if (get().loading || pendingWrites) return;
+    if (get().loading || !get().loaded || pendingWrites) return;
     const writesBefore = writesQueued;
     try {
       const data = await storageProvider.getData();
@@ -113,15 +144,43 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   // A save that has not started yet sends the state as it is when it starts, so changes made
-  // meanwhile join it instead of queueing another PUT.
+  // meanwhile join it instead of queueing another PUT. Every save PUTs the whole document, so
+  // never save a board we failed to load: that would overwrite the real data with an empty one.
   save: () => {
     queuedSave ??= enqueueWrite(async () => {
       queuedSave = null;
+      if (!get().loaded) return;
       const { tasks, contexts, columns } = get();
-      await storageProvider.saveData({ tasks, contexts, columns });
+      try {
+        await storageProvider.saveData({ ...loadedDoc, tasks, contexts, columns });
+        set({ saveError: null });
+      } catch (error) {
+        console.error('Failed to save data', error);
+        set({ saveError: errorMessage(error), ...needsTokenIf(error) });
+      }
     });
     return queuedSave;
   },
+
+  submitToken: (token) => {
+    setAccessToken(token);
+    set({ hasToken: true, needsToken: false });
+    // Retry whatever needed the token.
+    if (!get().loaded) {
+      get().loadData();
+      return;
+    }
+    if (get().saveError) get().save();
+    if (get().archiveOpen) get().loadArchive();
+  },
+
+  forgetToken: () => {
+    setAccessToken(null);
+    set({ hasToken: false, loaded: false, tasks: [], contexts: [], columns: [], archivedTasks: null });
+    get().loadData();
+  },
+
+  dismissTokenPrompt: () => set({ needsToken: false }),
 
   addTask: async (title, description, status, contextId) => {
     const newTask: Task = {
@@ -260,23 +319,27 @@ export const useStore = create<BoardState>((set, get) => ({
   },
 
   loadArchive: async () => {
-    set({ archivedTasks: null });
+    set({ archivedTasks: null, archiveError: null });
     try {
       set({ archivedTasks: await storageProvider.getArchive() });
     } catch (error) {
       console.error('Failed to load archive', error);
-      set({ archivedTasks: [] });
+      set({ archiveError: errorMessage(error), ...needsTokenIf(error) });
     }
   },
 
   // Archive and restore wait for pending saves. The store mirrors the server's move locally, unless
   // the server moved fewer tasks than asked (e.g. archived elsewhere meanwhile): then it reloads.
+  // No reload after a failed save, though: it would drop the unsaved changes.
   archiveTasks: (taskIds) =>
     enqueueWrite(async () => {
       const archived = await storageProvider.archiveTasks(taskIds);
       if (archived === taskIds.length) set({ tasks: get().tasks.filter(t => !taskIds.includes(t.id)) });
-      else set(boardState(await storageProvider.getData()));
-    }).catch(error => console.error('Failed to archive tasks', error)),
+      else if (!get().saveError) set(boardState(await storageProvider.getData()));
+    }).catch(error => {
+      console.error('Failed to archive tasks', error);
+      set({ saveError: errorMessage(error), ...needsTokenIf(error) });
+    }),
 
   restoreTasks: (taskIds) =>
     enqueueWrite(async () => {
@@ -288,9 +351,12 @@ export const useStore = create<BoardState>((set, get) => ({
           tasks: [...get().tasks, ...archived.filter(t => taskIds.includes(t.id)).map(t => unarchiveTask(t, updatedAt))],
           archivedTasks: archived.filter(t => !taskIds.includes(t.id)),
         });
-      } else {
+      } else if (!get().saveError) {
         set(boardState(await storageProvider.getData()));
         await get().loadArchive();
       }
-    }).catch(error => console.error('Failed to restore tasks', error)),
+    }).catch(error => {
+      console.error('Failed to restore tasks', error);
+      set({ saveError: errorMessage(error), ...needsTokenIf(error) });
+    }),
 }));

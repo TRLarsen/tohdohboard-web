@@ -1,55 +1,64 @@
 import { TohdohBoardData, Task, Context, Column, ArchivedTask } from '@/types';
 import { StorageProvider } from './StorageProvider';
 
+// Absolute API base for builds without the Next server (static export / native shell); otherwise
+// same-origin `/api`, which next.config.ts rewrites to the backend.
+const API_BASE = (process.env.NEXT_PUBLIC_TOHDOH_API_URL || '/api').replace(/\/+$/, '');
+const TOKEN_KEY = 'tohdohboard-token';
+
+/** The backend answered 401 asking for a bearer token: it is missing or was rejected. */
+export class UnauthorizedError extends Error {}
+
+export function getAccessToken(): string | null {
+  try {
+    return typeof window === 'undefined' ? null : localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Stores the bearer token sent with every API request; `null` forgets it. */
+export function setAccessToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Storage unavailable: the token can't be remembered.
+  }
+}
+
 export class HttpStorageProvider implements StorageProvider {
-  private getApiBase(): string {
-    if (typeof window !== 'undefined') {
-      return `http://${window.location.hostname}:3001/api`;
+  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const headers = new Headers(init.headers);
+    const token = getAccessToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    if (init.body) headers.set('Content-Type', 'application/json');
+    const response = await fetch(`${API_BASE}${path}`, { cache: 'no-store', ...init, headers });
+    if (response.status === 401) {
+      // The backend challenges for a bearer token only where one would be accepted. Otherwise
+      // (proxy auth) the proxy in front of it did not identify the user: a token can't help.
+      if (/^bearer\b/i.test(response.headers.get('WWW-Authenticate') ?? '')) {
+        throw new UnauthorizedError('Access token required');
+      }
+      throw new Error('Not signed in: open the board through its sign-in proxy (e.g. Tailscale Serve)');
     }
-    return 'http://127.0.0.1:3001/api';
-  }
-
-  private getApiUrl(): string {
-    return `${this.getApiBase()}/data`;
-  }
-
-  private async postJson<T>(path: string, body: unknown): Promise<T> {
-    const response = await fetch(`${this.getApiBase()}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
     if (!response.ok) {
-      throw new Error(`POST ${path} failed: ${response.statusText}`);
+      throw new Error(`${init.method ?? 'GET'} ${path} failed: ${response.status} ${response.statusText}`);
     }
-    return await response.json();
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  }
+
+  private postJson<T>(path: string, body: unknown): Promise<T> {
+    return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) });
   }
 
   async getData(): Promise<TohdohBoardData> {
-    const response = await fetch(this.getApiUrl(), {
-      cache: 'no-store'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.statusText}`);
-    }
-    return await response.json();
+    return this.request<TohdohBoardData>('/data');
   }
 
   async saveData(data: TohdohBoardData): Promise<void> {
-    try {
-      const response = await fetch(this.getApiUrl(), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to save data: ${response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Error saving to backend:', error);
-    }
+    await this.request('/data', { method: 'PUT', body: JSON.stringify(data) });
   }
 
   async getTasks(): Promise<Task[]> {
@@ -147,11 +156,7 @@ export class HttpStorageProvider implements StorageProvider {
   }
 
   async getArchive(): Promise<ArchivedTask[]> {
-    const response = await fetch(`${this.getApiBase()}/archive`, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch archive: ${response.statusText}`);
-    }
-    return (await response.json()).tasks;
+    return (await this.request<{ tasks: ArchivedTask[] }>('/archive')).tasks;
   }
 
   async archiveTasks(taskIds: string[]): Promise<number> {
