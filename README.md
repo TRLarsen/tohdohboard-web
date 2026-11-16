@@ -63,6 +63,38 @@ Never do this with the backend in proxy auth mode.
 
 `TOHDOH_STATIC_EXPORT=1 NEXT_PUBLIC_TOHDOH_API_URL=https://board.example.com/api npm run build` writes a static site to `out/` with no Next.js server and therefore no `/api` proxy: the browser calls `NEXT_PUBLIC_TOHDOH_API_URL` (the API base, ending in `/api`) directly, so the backend must allow that origin (CORS). The variable is required in this mode and is baked into the build.
 
+## Native Linux App
+
+`src-tauri/` wraps the static export in a [Tauri](https://tauri.app) window that uses the system WebKitGTK. It is the same UI with the same features, and needs no Node.js server at runtime: the app calls the backend directly.
+
+Prerequisites (Debian/Ubuntu) and a Rust toolchain (`rustup`):
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+Build and run:
+
+```bash
+NEXT_PUBLIC_TOHDOH_API_URL=http://<host>:3001/api npm run build:native
+./src-tauri/target/release/tohdohboard        # or install src-tauri/target/release/bundle/deb/*.deb
+npm run dev:native                            # development: window on `next dev`, /api proxied as usual
+```
+
+The backend URL is baked in at build time (rebuild to point at another backend). The window's origin is `tauri://localhost`: the backend's default auth mode allows any origin; with auth enabled, add `"tauri://localhost"` to `auth.cors_origins`. Plain `http://` backends work (tested with a LAN address); no Tauri plugins or IPC are used.
+
+### Is it lighter than the browser?
+
+Measured with 30 tasks, idle on the board, under Xvfb (software rendering), 3 runs each; PSS summed over the whole process tree:
+
+| | Memory (PSS) | Idle CPU | Window to board |
+|---|---|---|---|
+| Native app (app + WebKitWebProcess + WebKitNetworkProcess) | 452–484 MiB | ~0.03 % | 2.8–6.0 s |
+| Chromium, one app window (fresh browser) | 469–473 MiB | ~0.25 % | 1.0–1.7 s |
+| `next start` server (web version only) | 119 MiB | 0 % | — |
+
+The native app is about as heavy as a dedicated browser window; its savings are the Node server (which serving `out/` from any static file server also removes) and a little idle CPU. A tab in a browser you already have open costs less than either. Release binary: 3.7 MiB (plus the system WebKitGTK library); `.deb`: 1.7 MiB.
+
 ## Security Notice
 
 The web app has no authentication of its own; it relies on the backend's auth mode and on whatever is in front of it.
