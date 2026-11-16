@@ -27,7 +27,8 @@ import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
 import { ContextModal } from './ContextModal';
 import { ColumnModal } from './ColumnModal';
-import { Plus, LayoutGrid, Settings, X, Columns } from 'lucide-react';
+import { ArchiveModal } from './ArchiveModal';
+import { Plus, LayoutGrid, Settings, X, Columns, Archive } from 'lucide-react';
 
 export const Board: React.FC = () => {
   const { 
@@ -36,6 +37,7 @@ export const Board: React.FC = () => {
     columns,
     loading, 
     loadData, 
+    refresh,
     moveTask, 
     addTask, 
     updateTask, 
@@ -48,6 +50,8 @@ export const Board: React.FC = () => {
     updateColumn,
     deleteColumn,
     updateColumnOrder,
+    archiveTasks,
+    setArchiveOpen,
     editMode,
     setEditMode
   } = useStore();
@@ -79,6 +83,19 @@ export const Board: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Catch up with changes made elsewhere whenever the user comes back to the page; no polling.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', onReturn);
+    document.addEventListener('visibilitychange', onReturn);
+    return () => {
+      window.removeEventListener('focus', onReturn);
+      document.removeEventListener('visibilitychange', onReturn);
+    };
+  }, [refresh]);
 
   if (loading) {
     return (
@@ -225,6 +242,14 @@ export const Board: React.FC = () => {
                 <Plus size={16} />
                 Add Swimlane
               </button>
+
+              <button
+                onClick={() => setArchiveOpen(true)}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 whitespace-nowrap bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all"
+              >
+                <Archive size={16} />
+                Archive
+              </button>
               
               <button
                 onClick={() => {
@@ -308,6 +333,7 @@ export const Board: React.FC = () => {
         onClose={() => setIsTaskModalOpen(false)}
         onSave={handleSaveTask}
         onDelete={deleteTask}
+        onArchive={(taskId) => archiveTasks([taskId])}
         task={selectedTask}
         defaultStatus={defaultStatus}
         defaultContextId={defaultContextId}
@@ -323,6 +349,8 @@ export const Board: React.FC = () => {
         onDelete={deleteContext}
         context={selectedContext}
       />
+
+      <ArchiveModal />
 
       <ColumnModal
         isOpen={isColumnModalOpen}

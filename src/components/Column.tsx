@@ -6,7 +6,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { Task, Column as ColumnType } from '@/types';
 import { TaskCard } from './TaskCard';
-import { Plus, GripVertical, Settings } from 'lucide-react';
+import { Plus, Archive } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 interface ColumnProps {
@@ -16,9 +16,11 @@ interface ColumnProps {
   tasks: Task[];
   onAddTask: (status: string, contextId: string) => void;
   onTaskClick: (task: Task) => void;
+  /** Set on the done column: archives every task in this cell. */
+  onArchiveAll?: () => void;
 }
 
-export const Column: React.FC<ColumnProps> = ({ id, contextId, column, tasks, onAddTask, onTaskClick }) => {
+export const Column: React.FC<ColumnProps> = ({ id, contextId, column, tasks, onAddTask, onTaskClick, onArchiveAll }) => {
   const { editMode } = useStore();
   
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
@@ -43,12 +45,25 @@ export const Column: React.FC<ColumnProps> = ({ id, contextId, column, tasks, on
           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">{column.name}</h3>
         </div>
         {!editMode && (
-          <button
-            onClick={() => onAddTask(column.id, contextId)}
-            className="text-neutral-500 hover:text-blue-500 p-1 rounded transition-colors"
-          >
-            <Plus size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            {onArchiveAll && tasks.length > 0 && (
+              <button
+                onClick={onArchiveAll}
+                title={`Archive ${tasks.length} done ${tasks.length === 1 ? 'task' : 'tasks'}`}
+                aria-label={`Archive done tasks in ${column.name}`}
+                className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 hover:text-amber-500 px-1.5 py-2 md:py-1 rounded transition-colors"
+              >
+                <Archive size={12} />
+                Archive
+              </button>
+            )}
+            <button
+              onClick={() => onAddTask(column.id, contextId)}
+              className="text-neutral-500 hover:text-blue-500 p-1 rounded transition-colors"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
         )}
       </div>
       

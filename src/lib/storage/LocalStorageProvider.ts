@@ -1,7 +1,9 @@
-import { TohdohBoardData, Task, Context, Column } from '@/types';
+import { TohdohBoardData, Task, Context, Column, ArchivedTask } from '@/types';
 import { StorageProvider } from './StorageProvider';
+import { unarchiveTask } from '@/lib/board';
 
 const STORAGE_KEY = 'tohdohboard-data';
+const ARCHIVE_KEY = 'tohdohboard-archive';
 
 const DEFAULT_DATA: TohdohBoardData = {
   tasks: [],
@@ -114,6 +116,35 @@ export class LocalStorageProvider implements StorageProvider {
       return position !== -1 ? { ...c, position } : c;
     });
     await this.saveData(data);
+  }
+
+  async getArchive(): Promise<ArchivedTask[]> {
+    if (typeof window === 'undefined') return [];
+    const archive: ArchivedTask[] = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]');
+    return archive.sort((a, b) => b.archivedAt.localeCompare(a.archivedAt));
+  }
+
+  async archiveTasks(taskIds: string[]): Promise<number> {
+    const data = await this.getData();
+    const archivedAt = new Date().toISOString();
+    const moved = data.tasks.filter(t => taskIds.includes(t.id)).map(t => ({ ...t, archivedAt }));
+    data.tasks = data.tasks.filter(t => !taskIds.includes(t.id));
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify([...(await this.getArchive()), ...moved]));
+    await this.saveData(data);
+    return moved.length;
+  }
+
+  async restoreTasks(taskIds: string[]): Promise<number> {
+    const archive = await this.getArchive();
+    const data = await this.getData();
+    const updatedAt = new Date().toISOString();
+    const restored = archive
+      .filter(t => taskIds.includes(t.id))
+      .map(t => unarchiveTask(t, updatedAt));
+    data.tasks.push(...restored);
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive.filter(t => !taskIds.includes(t.id))));
+    await this.saveData(data);
+    return restored.length;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Task, Context, Column, TohdohBoardData } from '@/types';
+import { Task, Context, Column, TohdohBoardData, ArchivedTask } from '@/types';
 
 export interface StorageProvider {
   getData(): Promise<TohdohBoardData>;
@@ -17,4 +17,11 @@ export interface StorageProvider {
   saveColumn(column: Column): Promise<void>;
   deleteColumn(columnId: string): Promise<void>;
   updateColumnOrder(columnIds: string[]): Promise<void>;
+
+  /** Archived tasks, newest first. */
+  getArchive(): Promise<ArchivedTask[]>;
+  /** Moves tasks from the board to the archive; returns how many were archived. */
+  archiveTasks(taskIds: string[]): Promise<number>;
+  /** Moves archived tasks back onto the board; returns how many were restored. */
+  restoreTasks(taskIds: string[]): Promise<number>;
 }
