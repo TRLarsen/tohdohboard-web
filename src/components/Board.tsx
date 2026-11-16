@@ -186,7 +186,7 @@ export const Board: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="flex items-center justify-between mb-8">
+      <header className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-900/40 text-white">
             <LayoutGrid size={24} />
@@ -194,10 +194,10 @@ export const Board: React.FC = () => {
           <h1 className="text-2xl font-black text-neutral-100 tracking-tight">TohdohBoard</h1>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-2 md:gap-4">
           <button
             onClick={() => setEditMode(!editMode)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border transition-all ${editMode ? 'bg-amber-600/20 border-amber-600 text-amber-500 hover:bg-amber-600/30' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'}`}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 whitespace-nowrap text-sm font-semibold rounded-lg border transition-all ${editMode ? 'bg-amber-600/20 border-amber-600 text-amber-500 hover:bg-amber-600/30' : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border-neutral-700'}`}
           >
             {editMode ? <X size={16} /> : <Settings size={16} />}
             {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
@@ -206,7 +206,7 @@ export const Board: React.FC = () => {
           {editMode && (
             <button
               onClick={() => setIsColumnModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all animate-in fade-in slide-in-from-right-4"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 whitespace-nowrap bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all animate-in fade-in slide-in-from-right-4"
             >
               <Columns size={16} />
               Manage Columns
@@ -220,7 +220,7 @@ export const Board: React.FC = () => {
                   setSelectedContext(undefined);
                   setIsContextModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 whitespace-nowrap bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-sm font-semibold rounded-lg border border-neutral-700 transition-all"
               >
                 <Plus size={16} />
                 Add Swimlane
@@ -233,7 +233,7 @@ export const Board: React.FC = () => {
                   setDefaultContextId(undefined);
                   setIsTaskModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-900/20 transition-all"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-900/20 transition-all"
               >
                 <Plus size={16} />
                 New Task
@@ -250,7 +250,7 @@ export const Board: React.FC = () => {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-x-auto pb-10">
+        <div className="@container flex-1 overflow-x-auto pb-10">
           <div className="min-w-full inline-block align-middle">
             <SortableContext items={contexts.map(c => `swimlane-${c.id}`)} strategy={verticalListSortingStrategy}>
               {contexts.map(context => (

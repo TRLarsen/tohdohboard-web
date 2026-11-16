@@ -55,15 +55,16 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
       style={style} 
       className={`mb-8 last:mb-0 ${editMode ? 'p-4 border-2 border-dashed border-neutral-700 rounded-xl bg-neutral-900/30' : ''}`}
     >
-      <div className="flex items-center justify-between mb-4 border-b border-neutral-800 pb-2">
-        <div className="flex items-center gap-2">
+      {/* Pinned to the visible width of the scrolling board (@container in Board) so it stays on screen while columns scroll. */}
+      <div className={`sticky z-10 flex items-center justify-center gap-2 mb-4 border-b border-neutral-800 pb-2 md:justify-between ${editMode ? 'left-4 w-[calc(100cqw-2rem)]' : 'left-0 w-[100cqw]'}`}>
+        <div className="flex items-center gap-2 min-w-0">
           {editMode && (
             <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-neutral-500 hover:text-neutral-300 mr-2">
               <GripVertical size={20} />
             </div>
           )}
-          <h2 className="text-lg font-bold text-neutral-100 tracking-tight">{context.name}</h2>
-          <span className="px-2 py-0.5 text-[10px] font-medium bg-neutral-800 text-neutral-400 rounded-full border border-neutral-700 uppercase">
+          <h2 title={context.name} className="text-lg font-bold text-neutral-100 tracking-tight truncate">{context.name}</h2>
+          <span className="hidden md:inline px-2 py-0.5 text-[10px] font-medium bg-neutral-800 text-neutral-400 rounded-full border border-neutral-700 uppercase">
             {context.id}
           </span>
         </div>
